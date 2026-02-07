@@ -13,7 +13,30 @@ import * as health from "./routes/health.js";
 import * as db from "./db.js";
 
 const app = express();
-app.use(cors());
+
+// Allow frontend origin(s). Comma-separated list; default includes production and localhost.
+const allowedOrigins = (process.env.CORS_ORIGIN || "https://shadowsettle.0xo.in,http://localhost:3000,http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(null, false);
+    },
+    credentials: true,
+  })
+);
+
+// Normalize double (or multiple) slashes in path so //health/checks -> /health/checks
+app.use((req, res, next) => {
+  const [pathPart, queryPart] = req.url.split("?");
+  const normalized = pathPart.replace(/\/+/g, "/") + (queryPart ? `?${queryPart}` : "");
+  if (normalized !== req.url) req.url = normalized;
+  next();
+});
+
 app.use(express.json({ limit: "1mb" }));
 
 const PORT = process.env.PORT || 3001;
