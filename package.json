@@ -1,0 +1,23 @@
+{
+  "name": "shadowsettle-backend",
+  "version": "1.0.0",
+  "description": "Backend for ShadowSettle — iExec TEE settlement integration",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4",
+    "express": "^4.21.1",
+    "iexec": "^8.22.5",
+    "pg": "^8.13.0"
+  }
+}
