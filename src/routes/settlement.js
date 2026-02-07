@@ -36,6 +36,12 @@ function formatUsdc(raw) {
   return `${whole.toLocaleString()}.${fracStr}`;
 }
 
+/** USDC raw amount to number (e.g. for frontend display without parsing locale string). */
+function usdcRawToNumber(raw) {
+  const d = 10 ** USDC_DECIMALS;
+  return Number(raw) / d;
+}
+
 /**
  * GET /settlement/config
  * Returns settlement and token addresses for the frontend (Arbitrum Sepolia).
@@ -185,7 +191,8 @@ export async function getTreasuryBalanceRoute(req, res) {
 }
 
 /**
- * Return current treasury balance formatted (for dashboard). Uses DB cache or chain.
+ * Return current treasury balance for dashboard: { formatted, numeric }.
+ * formatted: locale string e.g. "1,234.56"; numeric: number for safe display (avoids NaN when frontend uses Number()).
  */
 export async function getTreasuryBalanceFormatted() {
   const rpc = process.env.ARBITRUM_SEPOLIA_RPC_URL;
@@ -195,7 +202,12 @@ export async function getTreasuryBalanceFormatted() {
   if (db.isDbConfigured()) {
     await db.initDb();
     const stored = await db.getTreasuryBalance(settlementAddress);
-    if (stored) return stored.balanceFormatted;
+    if (stored) {
+      const num = typeof stored.balanceFormatted === "string"
+        ? parseFloat(stored.balanceFormatted.replace(/,/g, "")) || 0
+        : 0;
+      return { formatted: stored.balanceFormatted, numeric: num };
+    }
   }
   if (!tokenAddress) {
     try {
@@ -210,7 +222,7 @@ export async function getTreasuryBalanceFormatted() {
     const provider = new ethers.JsonRpcProvider(rpc);
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
     const balanceRaw = await token.balanceOf(settlementAddress);
-    return formatUsdc(balanceRaw);
+    return { formatted: formatUsdc(balanceRaw), numeric: usdcRawToNumber(balanceRaw) };
   } catch (e) {
     return null;
   }

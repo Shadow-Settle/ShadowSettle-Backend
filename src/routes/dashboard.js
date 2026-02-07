@@ -14,7 +14,9 @@ function log(...args) {
  */
 export async function getStats(req, res) {
   try {
-    const totalFundsDeposited = await getTreasuryBalanceFormatted();
+    const balance = await getTreasuryBalanceFormatted();
+    const totalFundsDeposited = balance != null ? balance.formatted : "0";
+    const totalFundsDepositedNum = balance != null ? balance.numeric : 0;
     let jobsRunning = 0;
     let settlementsCompleted = 0;
     let settlementsSettled = 0;
@@ -34,7 +36,8 @@ export async function getStats(req, res) {
     }
 
     res.json({
-      totalFundsDeposited: totalFundsDeposited != null ? totalFundsDeposited : "0",
+      totalFundsDeposited,
+      totalFundsDepositedNum,
       activePools,
       jobsRunning,
       settlementsCompleted,
