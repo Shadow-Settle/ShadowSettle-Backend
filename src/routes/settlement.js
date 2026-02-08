@@ -47,14 +47,11 @@ function usdcRawToNumber(raw) {
  * Returns settlement and token addresses for the frontend (Arbitrum Sepolia).
  */
 export async function getConfig(req, res) {
-  log("[DEBUG] GET /settlement/config requested");
   try {
     const rpc = process.env.ARBITRUM_SEPOLIA_RPC_URL;
     const settlementAddress = process.env.SETTLEMENT_CONTRACT_ADDRESS;
     let tokenAddress = process.env.TEST_USDC_ADDRESS;
-    log("[DEBUG] getConfig: rpc=", rpc ? "set" : "missing", "settlement=", settlementAddress || "missing", "token(env)=", tokenAddress || "missing");
     if (!rpc || !settlementAddress) {
-      log("[DEBUG] getConfig: 503 missing config");
       res.status(503).json({
         error: "Settlement not configured. Set ARBITRUM_SEPOLIA_RPC_URL and SETTLEMENT_CONTRACT_ADDRESS.",
       });
@@ -65,12 +62,10 @@ export async function getConfig(req, res) {
         const provider = new ethers.JsonRpcProvider(rpc);
         const contract = new ethers.Contract(settlementAddress, SETTLEMENT_ABI, provider);
         tokenAddress = await contract.token();
-        log("[DEBUG] getConfig: token from contract:", tokenAddress);
       } catch (e) {
         log("getConfig: could not read token from contract", e.message);
       }
     }
-    log("[DEBUG] getConfig: 200 settlement=", settlementAddress, "token=", tokenAddress);
     res.json({
       settlementAddress,
       tokenAddress: tokenAddress || null,
@@ -124,13 +119,11 @@ export async function getNetworkInfoRoute(req, res) {
  * Without Postgres: always reads from chain and returns.
  */
 export async function getTreasuryBalanceRoute(req, res) {
-  log("[DEBUG] GET /settlement/treasury-balance requested", "refresh=", req.query?.refresh);
   try {
     const rpc = process.env.ARBITRUM_SEPOLIA_RPC_URL;
     const settlementAddress = process.env.SETTLEMENT_CONTRACT_ADDRESS;
     let tokenAddress = process.env.TEST_USDC_ADDRESS;
     if (!rpc || !settlementAddress) {
-      log("[DEBUG] getTreasuryBalance: 503 missing config");
       res.status(503).json({
         error: "Settlement not configured. Set ARBITRUM_SEPOLIA_RPC_URL and SETTLEMENT_CONTRACT_ADDRESS.",
       });
@@ -150,13 +143,11 @@ export async function getTreasuryBalanceRoute(req, res) {
 
     const forceRefresh = req.query?.refresh === "1" || req.query?.refresh === "true";
     const useDb = db.isDbConfigured();
-    log("[DEBUG] getTreasuryBalance: forceRefresh=", forceRefresh, "useDb=", useDb);
 
     if (useDb && !forceRefresh) {
       await db.initDb();
       const stored = await db.getTreasuryBalance(settlementAddress);
       if (stored) {
-        log("[DEBUG] getTreasuryBalance: 200 from DB balance=", stored.balanceFormatted);
         res.json({
           balanceFormatted: stored.balanceFormatted,
           balanceRaw: stored.balanceRaw,
@@ -171,7 +162,6 @@ export async function getTreasuryBalanceRoute(req, res) {
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
     const balanceRaw = await token.balanceOf(settlementAddress);
     const balanceFormatted = formatUsdc(balanceRaw);
-    log("[DEBUG] getTreasuryBalance: from chain balanceRaw=", balanceRaw.toString(), "formatted=", balanceFormatted);
 
     if (useDb) {
       await db.initDb();
